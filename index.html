@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>친구 유형 테스트</title>
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        <!-- Custom CSS -->
+        <link rel="stylesheet" href="style.css">
+        <!-- External Libraries -->
+        <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+        <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+        <!-- Custom JS (Load after external libraries) -->
+        <script defer src="script.js"></script>
+    </head>
+<body>
+    <div class="container">
+        <!-- 시작 화면 -->
+        <div id="start-screen" class="screen active">
+            <h1>나의 친구 유형 테스트</h1>
+            <p>당신은 어떤 유형의 친구인가요?<br>재미있는 심리 테스트로 알아보세요!</p>
+            <button id="start-btn" class="btn">테스트 시작하기</button>
+            <div class="test-info">
+                <p>소요시간: 약 3분</p>
+                <p>문항 수: 12개</p>
+            </div>
+        </div>
+
+        <!-- 질문 화면 -->
+        <div id="question-screen" class="screen">
+            <div class="progress-bar">
+                <div class="progress"></div>
+            </div>
+            <div class="question-container">
+                <h2 id="question-text"></h2>
+                <div id="options-container"></div>
+            </div>
+        </div>
+
+        <!-- 결과 화면 -->
+        <div id="result-screen" class="screen">
+            <div class="result-header">
+                <h2>당신의 친구 유형은...</h2>
+                <div id="result-type" class="result-title"></div>
+                <div class="type-image">
+                    <img id="type-illustration" src="" alt="유형 이미지">
+                </div>
+            </div>
+
+            <div class="result-content">
+                <!-- 유형 설명 -->
+                <div class="detail-section type-analysis">
+                    <h3>✨ 유형 분석</h3>
+                    <div class="analysis-content">
+                        <div id="result-description" class="result-description"></div>
+                        <div class="personality-traits">
+                            <h4>🎯 성격 특성</h4>
+                            <ul id="personality-traits-list"></ul>
+                        </div>
+                        <div class="communication-style">
+                            <h4>💭 의사소통 스타일</h4>
+                            <ul id="communication-style-list"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI 맞춤 조언 섹션 임시 제거
+                <div class="detail-section advice-section">
+                    <h3>💡 맞춤 조언</h3>
+                    <div id="ai-advice" class="ai-advice">
+                        <div class="advice-content">
+                            <div class="general-advice"></div>
+                            <div class="specific-advice">
+                                <h4>🌱 성장을 위한 제안</h4>
+                                <ul id="growth-suggestions"></ul>
+                                <h4>🤝 관계 개선 팁</h4>
+                                <ul id="relationship-tips"></ul>
+                            </div>
+                        </div>
+                        <button class="more-advice-btn">AI의 추가 조언 받기</button>
+                    </div>
+                </div>
+                -->
+
+                <!-- 강점 -->
+                <div class="detail-section strengths-section">
+                    <h3>💪 당신의 강점</h3>
+                    <div class="expandable-list">
+                        <ul id="strengths-list"></ul>
+                        <!-- 강점 활용법 섹션 임시 제거
+                        <div class="strength-details">
+                            <h4>💫 강점 활용 방법</h4>
+                            <ul id="strength-usage-list"></ul>
+                        </div>
+                        -->
+                    </div>
+                </div>
+
+                <!-- 보완점 -->
+                <div class="detail-section weaknesses-section">
+                    <h3>🔍 보완할 점</h3>
+                    <div class="expandable-list">
+                        <ul id="weaknesses-list"></ul>
+                        <!-- 개선 전략 섹션 임시 제거
+                        <div class="improvement-tips">
+                            <h4>📈 개선 전략</h4>
+                            <ul id="improvement-tips-list"></ul>
+                        </div>
+                        -->
+                    </div>
+                </div>
+
+                <!-- 궁합 정보 섹션 임시 제거
+                <div class="detail-section compatibility-section">
+                    <h3>🤝 찰떡 궁합</h3>
+                    <div class="compatibility-info">
+                        <div class="best-match">
+                            <h4>😊 잘 맞는 유형</h4>
+                            <p id="best-match"></p>
+                            <div class="match-explanation" id="best-match-explanation"></div>
+                        </div>
+                        <div class="worst-match">
+                            <h4>💭 노력이 필요한 관계</h4>
+                            <p id="worst-match"></p>
+                            <div class="match-explanation" id="worst-match-explanation"></div>
+                        </div>
+                    </div>
+                </div>
+                -->
+
+                <div class="share-section">
+                    <h3>📱 결과 공유하기</h3>
+                    <div class="share-buttons">
+                        <button id="save-image-btn" class="share-btn">
+                            <i class="fas fa-image"></i> 이미지 저장
+                        </button>
+                        <button id="kakao-share-btn" class="share-btn">
+                            <i class="fas fa-comment"></i> 카카오톡 공유
+                        </button>
+                        <button id="copy-link-btn" class="share-btn">
+                            <i class="fas fa-link"></i> 링크 복사
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button onclick="restartTest()" class="btn restart-btn">다시 테스트하기</button>
+                    <button onclick="compareWithFriend()" class="btn compare-btn">친구와 궁합 비교</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
