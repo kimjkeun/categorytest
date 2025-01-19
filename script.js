@@ -544,34 +544,56 @@ function showQuestion() {
     const question = questions[currentQuestion];
     questionText.textContent = question.question;
 
-    // 원본 옵션 배열을 복사하고 섞기
-    const shuffledOptions = shuffleArray([...question.options].map((option, index) => ({
-        text: option,
-        originalIndex: index
-    })));
+    // 선택지 생성
+    createOptions(question.options);
 
-    // 옵션 표시
-    optionsContainer.innerHTML = shuffledOptions.map(option => `
-        <div class="option" onclick="selectOption(${option.originalIndex})">
-            ${option.text}
-        </div>
-    `).join('');
-
-    // 진행 상태 업데이트
-    const progress = ((currentQuestion + 1) / questions.length) * 100;
-    progressBar.style.width = progress + '%';
+    // 진행률 업데이트
+    updateProgress();
 }
 
-// 옵션 선택 함수
-function selectOption(optionIndex) {
-    userAnswers.push(optionIndex);
+// 선택지 생성
+function createOptions(options) {
+    const optionsContainer = document.getElementById('options-container');
+    optionsContainer.innerHTML = '';
+    options.forEach((option, index) => {
+        const optionElement = document.createElement('div');
+        optionElement.className = 'question-option';
+        optionElement.textContent = option;
+        optionElement.onclick = () => selectOption(index);
+        optionsContainer.appendChild(optionElement);
+    });
+}
+
+// 선택지 선택
+function selectOption(index) {
+    // 이전 선택 제거
+    document.querySelectorAll('.question-option').forEach(option => {
+        option.classList.remove('selected');
+    });
     
-    if (currentQuestion < questions.length - 1) {
-        currentQuestion++;
-        showQuestion();
-    } else {
-        showResult();
-    }
+    // 새로운 선택 표시
+    const selectedOption = document.querySelectorAll('.question-option')[index];
+    selectedOption.classList.add('selected');
+    
+    // 답변 저장
+    userAnswers[currentQuestion] = index;
+    
+    // 잠시 후 다음 질문으로
+    setTimeout(() => {
+        nextQuestion();
+    }, 500);
+}
+
+// 진행률 업데이트
+function updateProgress() {
+    const progress = ((currentQuestion + 1) / questions.length) * 100;
+    document.querySelector('.progress-bar-fill').style.width = `${progress}%`;
+}
+
+// 다음 질문으로
+function nextQuestion() {
+    currentQuestion++;
+    showQuestion();
 }
 
 // 결과 표시 함수
