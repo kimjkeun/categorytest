@@ -793,6 +793,7 @@ function shareToKakao() {
 
     const resultData = calculateResult();
     const resultType = resultTypes[resultData.type];
+    const shareUrl = createShareURL(resultData.type);
 
     Kakao.Share.sendDefault({
         objectType: 'feed',
@@ -801,16 +802,16 @@ function shareToKakao() {
             description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
             imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
             link: {
-                mobileWebUrl: window.location.href,
-                webUrl: window.location.href,
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
             },
         },
         buttons: [
             {
                 title: '테스트 하러가기',
                 link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
+                    mobileWebUrl: shareUrl,
+                    webUrl: shareUrl,
                 },
             },
         ],
@@ -819,15 +820,100 @@ function shareToKakao() {
 
 // URL에서 결과 파라미터 읽기
 function getResultFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const resultType = decodeURIComponent(urlParams.get('result') || '');
-    
-    // 정확한 타입 매칭
-    const foundType = Object.keys(resultTypes).find(type => type === resultType);
-    if (foundType) {
-        return foundType;
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const resultType = decodeURIComponent(urlParams.get('result') || '');
+        
+        // 정확한 타입 매칭
+        const foundType = Object.keys(resultTypes).find(type => type === resultType);
+        return foundType || null;
+    } catch (error) {
+        console.error('URL 파라미터 처리 중 오류:', error);
+        return null;
     }
-    return null;
+}
+
+// 공유용 URL 생성
+function createShareURL(resultType) {
+    try {
+        // 현재 페이지의 기본 URL 가져오기 (파라미터 제외)
+        const baseUrl = window.location.href.split('?')[0];
+        const url = new URL(baseUrl);
+        
+        // 결과 타입 인코딩하여 추가
+        url.searchParams.set('result', encodeURIComponent(resultType));
+        return url.toString();
+    } catch (error) {
+        console.error('공유 URL 생성 중 오류:', error);
+        // 폴백: 단순 문자열 조합
+        const baseUrl = window.location.href.split('?')[0];
+        return `${baseUrl}?result=${encodeURIComponent(resultType)}`;
+    }
+}
+
+// 링크 복사하기
+function copyLink() {
+    const resultData = calculateResult();
+    const shareUrl = createShareURL(resultData.type);
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        // navigator.clipboard API 사용 (HTTPS 환경)
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => showToast('결과 링크가 복사되었습니다!'))
+            .catch(() => showToast('링크 복사에 실패했습니다.'));
+    } else {
+        // 대체 방법 (HTTP 환경)
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+            document.execCommand('copy');
+            showToast('결과 링크가 복사되었습니다!');
+        } catch (err) {
+            console.error('링크 복사 실패:', err);
+            showToast('링크 복사에 실패했습니다.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+}
+
+// 카카오톡 공유하기
+function shareToKakao() {
+    if (!window.Kakao) {
+        console.error('Kakao SDK가 로드되지 않았습니다.');
+        return;
+    }
+
+    const resultData = calculateResult();
+    const resultType = resultTypes[resultData.type];
+    const shareUrl = createShareURL(resultData.type);
+
+    Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+            title: '나의 친구 유형 테스트 결과',
+            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
+            link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+            },
+        },
+        buttons: [
+            {
+                title: '테스트 하러가기',
+                link: {
+                    mobileWebUrl: shareUrl,
+                    webUrl: shareUrl,
+                },
+            },
+        ],
+    });
 }
 
 // 페이지 로드 시 URL 파라미터 확인
