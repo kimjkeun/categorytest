@@ -760,56 +760,24 @@ function shareToKakao() {
     });
 }
 
-// 링크 복사하기
-function copyLink() {
-    const url = window.location.href;
-    
-    if (navigator.clipboard && window.isSecureContext) {
-        // navigator.clipboard API 사용 (HTTPS 환경)
-        navigator.clipboard.writeText(url)
-            .then(() => showToast('링크가 복사되었습니다!'))
-            .catch(() => showToast('링크 복사에 실패했습니다.'));
-    } else {
-        // 대체 방법 (HTTP 환경)
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-999999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        
-        try {
-            document.execCommand('copy');
-            showToast('링크가 복사되었습니다!');
-        } catch (err) {
-            console.error('링크 복사 실패:', err);
-            showToast('링크 복사에 실패했습니다.');
-        } finally {
-            document.body.removeChild(textarea);
-        }
+// URL에서 결과 파라미터 읽기
+function getResultFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultType = urlParams.get('result');
+    if (resultType && resultTypes[resultType]) {
+        return resultType;
     }
+    return null;
 }
 
-// 토스트 메시지 표시
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast-message';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                document.body.removeChild(toast);
-            }, 300);
-        }, 2000);
-    }, 100);
-}
-
-// 이벤트 리스너 등록
+// 페이지 로드 시 URL 파라미터 확인
 document.addEventListener('DOMContentLoaded', () => {
+    const resultFromURL = getResultFromURL();
+    if (resultFromURL) {
+        currentQuestion = questions.length; // 모든 질문을 완료한 것으로 처리
+        showResult(resultFromURL);
+    }
+    
     // 카카오톡 초기화
     initializeKakao();
     
@@ -841,6 +809,99 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// 링크 복사하기
+function copyLink() {
+    const result = calculateResult();
+    const url = new URL(window.location.href);
+    url.searchParams.set('result', result.type);
+    const shareUrl = url.toString();
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        // navigator.clipboard API 사용 (HTTPS 환경)
+        navigator.clipboard.writeText(shareUrl)
+            .then(() => showToast('결과 링크가 복사되었습니다!'))
+            .catch(() => showToast('링크 복사에 실패했습니다.'));
+    } else {
+        // 대체 방법 (HTTP 환경)
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+            document.execCommand('copy');
+            showToast('결과 링크가 복사되었습니다!');
+        } catch (err) {
+            console.error('링크 복사 실패:', err);
+            showToast('링크 복사에 실패했습니다.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+}
+
+// 카카오톡 공유하기
+function shareToKakao() {
+    if (!window.Kakao) {
+        console.error('Kakao SDK가 로드되지 않았습니다.');
+        return;
+    }
+
+    const result = calculateResult();
+    const resultType = resultTypes[result.type];
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('result', result.type);
+
+    Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+            title: '나의 친구 유형 테스트 결과',
+            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
+            link: {
+                mobileWebUrl: shareUrl.toString(),
+                webUrl: shareUrl.toString(),
+            },
+        },
+        buttons: [
+            {
+                title: '테스트 하러가기',
+                link: {
+                    mobileWebUrl: window.location.origin + window.location.pathname,
+                    webUrl: window.location.origin + window.location.pathname,
+                },
+            },
+            {
+                title: '결과 보기',
+                link: {
+                    mobileWebUrl: shareUrl.toString(),
+                    webUrl: shareUrl.toString(),
+                },
+            }
+        ],
+    });
+}
+
+// 토스트 메시지 표시
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-message';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 2000);
+    }, 100);
+}
 
 // 결과를 이미지로 저장하는 함수
 async function saveAsImage() {
