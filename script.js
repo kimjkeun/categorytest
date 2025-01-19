@@ -536,22 +536,30 @@ function startTest() {
 
 // 질문 표시 함수
 function showQuestion() {
+    if (currentQuestion >= questions.length) {
+        showResult();
+        return;
+    }
+
     const question = questions[currentQuestion];
     questionText.textContent = question.question;
-    
-    // 진행바 업데이트
+
+    // 원본 옵션 배열을 복사하고 섞기
+    const shuffledOptions = shuffleArray([...question.options].map((option, index) => ({
+        text: option,
+        originalIndex: index
+    })));
+
+    // 옵션 표시
+    optionsContainer.innerHTML = shuffledOptions.map(option => `
+        <div class="option" onclick="selectOption(${option.originalIndex})">
+            ${option.text}
+        </div>
+    `).join('');
+
+    // 진행 상태 업데이트
     const progress = ((currentQuestion + 1) / questions.length) * 100;
-    progressBar.style.width = `${progress}%`;
-    
-    // 옵션 버튼들 생성
-    optionsContainer.innerHTML = '';
-    question.options.forEach((option, index) => {
-        const button = document.createElement('div');
-        button.className = 'option';
-        button.textContent = option;
-        button.addEventListener('click', () => selectOption(index));
-        optionsContainer.appendChild(button);
-    });
+    progressBar.style.width = progress + '%';
 }
 
 // 옵션 선택 함수
@@ -688,60 +696,70 @@ function copyToClipboard(text) {
     document.body.removeChild(textarea);
 }
 
-// 결과 계산 함수
-function calculateResult() {
-    // 답변 패턴 분석
-    let patterns = {
-        active: 0,      // 적극성
-        emotional: 0,   // 감성적 성향
-        logical: 0,     // 논리적 성향
-        social: 0       // 사교성
-    };
-    
-    // 각 답변에 따른 성향 점수 계산
-    userAnswers.forEach((answer, index) => {
-        switch(answer) {
-            case 0: // 주로 적극적/외향적 답변
-                patterns.active += 2;
-                patterns.social += 1;
-                break;
-            case 1: // 주로 신중/논리적 답변
-                patterns.logical += 2;
-                break;
-            case 2: // 주로 감성적/공감적 답변
-                patterns.emotional += 2;
-                patterns.social += 1;
-                break;
-            case 3: // 주로 관찰자/독립적 답변
-                patterns.logical += 1;
-                break;
-        }
-    });
-    
-    // 가장 높은 점수의 성향을 기반으로 결과 결정
-    let maxPattern = Object.entries(patterns).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-    
-    switch(maxPattern) {
-        case 'active':
-            return resultTypes["분위기 메이커형"];
-        case 'emotional':
-            return resultTypes["감성적 지원가형"];
-        case 'logical':
-            return resultTypes["신중한 조언가형"];
-        case 'social':
-            return resultTypes["든든한 지원자형"];
-        default:
-            return resultTypes["충실한 동반자형"];
+// 결과를 이미지로 저장하는 함수 - 현재 비활성화됨
+/*
+async function saveAsImage() {
+    try {
+        // 이미지 저장 중임을 알리는 토스트 메시지
+        showToast('이미지를 생성하는 중입니다...');
+        
+        // 결과 섹션의 스타일을 임시로 조정
+        const resultSection = document.querySelector('.result-container');
+        const originalPosition = resultSection.style.position;
+        resultSection.style.position = 'relative';
+        
+        // 공유 버튼 숨기기
+        const shareButtons = document.querySelector('.share-buttons');
+        const originalDisplay = shareButtons.style.display;
+        shareButtons.style.display = 'none';
+
+        // html2canvas 옵션
+        const options = {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            onclone: function(clonedDoc) {
+                // 클론된 문서의 스타일 조정
+                const clonedResult = clonedDoc.querySelector('.result-container');
+                if (clonedResult) {
+                    clonedResult.style.padding = '20px';
+                    clonedResult.style.margin = '0';
+                    clonedResult.style.width = 'auto';
+                }
+            }
+        };
+
+        // 이미지 생성
+        const canvas = await html2canvas(resultSection, options);
+        
+        // 원래 스타일 복구
+        resultSection.style.position = originalPosition;
+        shareButtons.style.display = originalDisplay;
+
+        // 이미지 저장
+        const image = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = '나의_친구_유형_테스트_결과.png';
+        link.href = image;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('이미지가 저장되었습니다!');
+    } catch (error) {
+        console.error('이미지 저장 중 오류 발생:', error);
+        showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
+        
+        // 에러 발생 시 스타일 복구
+        const resultSection = document.querySelector('.result-container');
+        const shareButtons = document.querySelector('.share-buttons');
+        if (resultSection) resultSection.style.position = 'relative';
+        if (shareButtons) shareButtons.style.display = 'flex';
     }
 }
-
-// 테스트 다시하기 함수
-function restartTest() {
-    currentQuestion = 0;
-    userAnswers = [];
-    resultScreen.classList.remove('active');
-    startScreen.classList.add('active');
-}
+*/
 
 // 카카오톡 SDK 초기화
 function initializeKakao() {
@@ -880,3 +898,67 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('kakao-share-btn').addEventListener('click', shareToKakao);
     document.getElementById('copy-link-btn').addEventListener('click', copyLink);
 });
+
+// 결과 계산 함수
+function calculateResult() {
+    // 답변 패턴 분석
+    let patterns = {
+        active: 0,      // 적극성
+        emotional: 0,   // 감성적 성향
+        logical: 0,     // 논리적 성향
+        social: 0       // 사교성
+    };
+    
+    // 각 답변에 따른 성향 점수 계산
+    userAnswers.forEach((answer, index) => {
+        switch(answer) {
+            case 0: // 주로 적극적/외향적 답변
+                patterns.active += 2;
+                patterns.social += 1;
+                break;
+            case 1: // 주로 신중/논리적 답변
+                patterns.logical += 2;
+                break;
+            case 2: // 주로 감성적/공감적 답변
+                patterns.emotional += 2;
+                patterns.social += 1;
+                break;
+            case 3: // 주로 관찰자/독립적 답변
+                patterns.logical += 1;
+                break;
+        }
+    });
+    
+    // 가장 높은 점수의 성향을 기반으로 결과 결정
+    let maxPattern = Object.entries(patterns).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+    
+    switch(maxPattern) {
+        case 'active':
+            return resultTypes["분위기 메이커형"];
+        case 'emotional':
+            return resultTypes["감성적 지원가형"];
+        case 'logical':
+            return resultTypes["신중한 조언가형"];
+        case 'social':
+            return resultTypes["든든한 지원자형"];
+        default:
+            return resultTypes["충실한 동반자형"];
+    }
+}
+
+// 테스트 다시하기 함수
+function restartTest() {
+    currentQuestion = 0;
+    userAnswers = [];
+    resultScreen.classList.remove('active');
+    startScreen.classList.add('active');
+}
+
+// 배열을 섞는 함수
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
