@@ -1,148 +1,3 @@
-// 결과 표시 함수
-async function showResult(forcedType = null) {
-    const resultData = forcedType ? { type: forcedType } : calculateResult();
-    const resultType = resultTypes[resultData.type];
-    
-    if (!resultType) {
-        console.error('결과 데이터를 찾을 수 없습니다:', resultData.type);
-        return;
-    }
-    
-    // 기본 결과 표시
-    document.getElementById('result-type').textContent = resultType.type || '';
-    document.getElementById('result-description').textContent = resultType.description || '';
-    
-    // 성격 특성 목록 표시
-    const personalityTraitsListEl = document.getElementById('personality-traits-list');
-    if (resultType.personalityTraits && Array.isArray(resultType.personalityTraits)) {
-        personalityTraitsListEl.innerHTML = resultType.personalityTraits.map(trait => `
-            <li>
-                <div class="personality-trait-title">${trait.title || ''}</div>
-                <div class="personality-trait-description">${trait.description || ''}</div>
-            </li>
-        `).join('');
-    } else {
-        personalityTraitsListEl.innerHTML = '<li>성격 특성 정보가 없습니다.</li>';
-    }
-
-    // 의사소통 스타일 목록 표시
-    const communicationListEl = document.getElementById('communication-style-list');
-    if (resultType.communicationStyle && Array.isArray(resultType.communicationStyle)) {
-        communicationListEl.innerHTML = resultType.communicationStyle.map(style => `
-            <li>
-                <div class="communication-style-title">${style.title || ''}</div>
-                <div class="communication-style-description">${style.description || ''}</div>
-            </li>
-        `).join('');
-    } else {
-        communicationListEl.innerHTML = '<li>의사소통 스타일 정보가 없습니다.</li>';
-    }
-
-    // 강점 목록 표시
-    const strengthsListEl = document.getElementById('strengths-list');
-    if (resultType.strengths && Array.isArray(resultType.strengths)) {
-        strengthsListEl.innerHTML = resultType.strengths.map(strength => {
-            if (typeof strength === 'string') {
-                return `<li>${strength}</li>`;
-            } else {
-                return `
-                    <li>
-                        <span class="strength-title">${strength.title || ''}</span>
-                        <p>${strength.description || ''}</p>
-                    </li>
-                `;
-            }
-        }).join('');
-    } else {
-        strengthsListEl.innerHTML = '<li>강점 정보가 없습니다.</li>';
-    }
-
-    // 약점 목록 표시
-    const weaknessesListEl = document.getElementById('weaknesses-list');
-    if (resultType.weaknesses && Array.isArray(resultType.weaknesses)) {
-        weaknessesListEl.innerHTML = resultType.weaknesses.map(weakness => {
-            if (typeof weakness === 'string') {
-                return `<li>${weakness}</li>`;
-            } else {
-                return `
-                    <li>
-                        <span class="weakness-title">${weakness.title || ''}</span>
-                        <p>${weakness.description || ''}</p>
-                    </li>
-                `;
-            }
-        }).join('');
-    } else {
-        weaknessesListEl.innerHTML = '<li>보완할 점 정보가 없습니다.</li>';
-    }
-
-    // 유형별 이미지 설정
-    const typeImage = document.getElementById('type-illustration');
-    if (resultType.type) {
-        typeImage.src = `images/characters/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
-        typeImage.alt = resultType.type;
-    }
-
-    // 화면 전환
-    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
-    document.getElementById('result-screen').classList.add('active');
-}
-
-// 결과 공유 함수
-function shareResult() {
-    const resultData = calculateResult();
-    const shareText = `나의 친구 유형 테스트 결과:\n${resultData.type}\n\n테스트 해보기 👉`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: '나의 친구 유형 테스트',
-            text: shareText,
-            url: window.location.href
-        })
-        .catch(error => {
-            console.log('공유 실패:', error);
-            alert('결과를 복사했습니다! 원하는 곳에 붙여넣어 공유하세요.');
-            copyToClipboard(shareText + window.location.href);
-        });
-    } else {
-        alert('결과를 복사했습니다! 원하는 곳에 붙여넣어 공유하세요.');
-        copyToClipboard(shareText + window.location.href);
-    }
-}
-
-// 카카오톡 공유하기
-function shareToKakao() {
-    if (!window.Kakao) {
-        console.error('Kakao SDK가 로드되지 않았습니다.');
-        return;
-    }
-
-    const resultData = calculateResult();
-    const resultType = resultTypes[resultData.type];
-
-    Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-            title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
-            link: {
-                mobileWebUrl: window.location.href,
-                webUrl: window.location.href,
-            },
-        },
-        buttons: [
-            {
-                title: '테스트 하러가기',
-                link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
-                },
-            },
-        ],
-    });
-}
-
 // 질문 데이터
 const questions = [
     {
@@ -501,7 +356,7 @@ const resultTypes = {
         personalityTraits: [
             {
                 title: "책임감",
-                description: "맡은 일을 끝까지 책임지고 수행합니다."
+                description: "맡은 일을 끝까지 책임지고 완수합니다."
             },
             {
                 title: "신뢰성",
@@ -753,10 +608,100 @@ function updateProgress() {
     document.querySelector('.progress-bar-fill').style.width = `${progress}%`;
 }
 
+// 결과 표시 함수
+async function showResult() {
+    const resultData = calculateResult();
+    const type = resultData.type;
+    const resultType = resultTypes[type];
+    if (!resultType) {
+        console.error('결과 데이터를 찾을 수 없습니다:', type);
+        return;
+    }
+    
+    // 기본 결과 표시
+    document.getElementById('result-type').textContent = resultType.type || '';
+    document.getElementById('result-description').textContent = resultType.description || '';
+    
+    // 성격 특성 목록 표시
+    const personalityTraitsListEl = document.getElementById('personality-traits-list');
+    if (resultType.personalityTraits && Array.isArray(resultType.personalityTraits)) {
+        personalityTraitsListEl.innerHTML = resultType.personalityTraits.map(trait => `
+            <li>
+                <div class="personality-trait-title">${trait.title || ''}</div>
+                <div class="personality-trait-description">${trait.description || ''}</div>
+            </li>
+        `).join('');
+    } else {
+        personalityTraitsListEl.innerHTML = '<li>성격 특성 정보가 없습니다.</li>';
+    }
+
+    // 의사소통 스타일 목록 표시
+    const communicationListEl = document.getElementById('communication-style-list');
+    if (resultType.communicationStyle && Array.isArray(resultType.communicationStyle)) {
+        communicationListEl.innerHTML = resultType.communicationStyle.map(style => `
+            <li>
+                <div class="communication-style-title">${style.title || ''}</div>
+                <div class="communication-style-description">${style.description || ''}</div>
+            </li>
+        `).join('');
+    } else {
+        communicationListEl.innerHTML = '<li>의사소통 스타일 정보가 없습니다.</li>';
+    }
+
+    // 강점 목록 표시
+    const strengthsListEl = document.getElementById('strengths-list');
+    if (resultType.strengths && Array.isArray(resultType.strengths)) {
+        strengthsListEl.innerHTML = resultType.strengths.map(strength => {
+            if (typeof strength === 'string') {
+                return `<li>${strength}</li>`;
+            } else {
+                return `
+                    <li>
+                        <span class="strength-title">${strength.title || ''}</span>
+                        <p>${strength.description || ''}</p>
+                    </li>
+                `;
+            }
+        }).join('');
+    } else {
+        strengthsListEl.innerHTML = '<li>강점 정보가 없습니다.</li>';
+    }
+
+    // 약점 목록 표시
+    const weaknessesListEl = document.getElementById('weaknesses-list');
+    if (resultType.weaknesses && Array.isArray(resultType.weaknesses)) {
+        weaknessesListEl.innerHTML = resultType.weaknesses.map(weakness => {
+            if (typeof weakness === 'string') {
+                return `<li>${weakness}</li>`;
+            } else {
+                return `
+                    <li>
+                        <span class="weakness-title">${weakness.title || ''}</span>
+                        <p>${weakness.description || ''}</p>
+                    </li>
+                `;
+            }
+        }).join('');
+    } else {
+        weaknessesListEl.innerHTML = '<li>보완할 점 정보가 없습니다.</li>';
+    }
+
+    // 유형별 이미지 설정
+    const typeImage = document.getElementById('type-illustration');
+    if (resultType.type) {
+        typeImage.src = `images/characters/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
+        typeImage.alt = resultType.type;
+    }
+
+    // 화면 전환
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+    document.getElementById('result-screen').classList.add('active');
+}
+
 // 결과 공유 함수
 function shareResult() {
-    const resultData = calculateResult();
-    const shareText = `나의 친구 유형 테스트 결과:\n${resultData.type}\n\n테스트 해보기 👉`;
+    const result = calculateResult();
+    const shareText = `나의 친구 유형 테스트 결과:\n${result.type}\n\n테스트 해보기 👉`;
     
     if (navigator.share) {
         navigator.share({
@@ -775,6 +720,16 @@ function shareResult() {
     }
 }
 
+// 클립보드 복사 함수
+function copyToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+}
+
 // 카카오톡 SDK 초기화
 function initializeKakao() {
     if (window.Kakao) {
@@ -791,27 +746,26 @@ function shareToKakao() {
         return;
     }
 
-    const resultData = calculateResult();
-    const resultType = resultTypes[resultData.type];
-    const shareUrl = createShareURL(resultData.type);
+    const result = calculateResult();
+    const resultType = resultTypes[result.type];
 
     Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
             title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
+            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
             link: {
-                mobileWebUrl: shareUrl,
-                webUrl: shareUrl,
+                mobileWebUrl: window.location.href,
+                webUrl: window.location.href,
             },
         },
         buttons: [
             {
                 title: '테스트 하러가기',
                 link: {
-                    mobileWebUrl: shareUrl,
-                    webUrl: shareUrl,
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
                 },
             },
         ],
@@ -820,100 +774,15 @@ function shareToKakao() {
 
 // URL에서 결과 파라미터 읽기
 function getResultFromURL() {
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const resultType = decodeURIComponent(urlParams.get('result') || '');
-        
-        // 정확한 타입 매칭
-        const foundType = Object.keys(resultTypes).find(type => type === resultType);
-        return foundType || null;
-    } catch (error) {
-        console.error('URL 파라미터 처리 중 오류:', error);
-        return null;
-    }
-}
-
-// 공유용 URL 생성
-function createShareURL(resultType) {
-    try {
-        // 현재 페이지의 기본 URL 가져오기 (파라미터 제외)
-        const baseUrl = window.location.href.split('?')[0];
-        const url = new URL(baseUrl);
-        
-        // 결과 타입 인코딩하여 추가
-        url.searchParams.set('result', encodeURIComponent(resultType));
-        return url.toString();
-    } catch (error) {
-        console.error('공유 URL 생성 중 오류:', error);
-        // 폴백: 단순 문자열 조합
-        const baseUrl = window.location.href.split('?')[0];
-        return `${baseUrl}?result=${encodeURIComponent(resultType)}`;
-    }
-}
-
-// 링크 복사하기
-function copyLink() {
-    const resultData = calculateResult();
-    const shareUrl = createShareURL(resultData.type);
+    const urlParams = new URLSearchParams(window.location.search);
+    const resultType = decodeURIComponent(urlParams.get('result') || '');
     
-    if (navigator.clipboard && window.isSecureContext) {
-        // navigator.clipboard API 사용 (HTTPS 환경)
-        navigator.clipboard.writeText(shareUrl)
-            .then(() => showToast('결과 링크가 복사되었습니다!'))
-            .catch(() => showToast('링크 복사에 실패했습니다.'));
-    } else {
-        // 대체 방법 (HTTP 환경)
-        const textarea = document.createElement('textarea');
-        textarea.value = shareUrl;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-999999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        
-        try {
-            document.execCommand('copy');
-            showToast('결과 링크가 복사되었습니다!');
-        } catch (err) {
-            console.error('링크 복사 실패:', err);
-            showToast('링크 복사에 실패했습니다.');
-        } finally {
-            document.body.removeChild(textarea);
-        }
+    // 정확한 타입 매칭
+    const foundType = Object.keys(resultTypes).find(type => type === resultType);
+    if (foundType) {
+        return foundType;
     }
-}
-
-// 카카오톡 공유하기
-function shareToKakao() {
-    if (!window.Kakao) {
-        console.error('Kakao SDK가 로드되지 않았습니다.');
-        return;
-    }
-
-    const resultData = calculateResult();
-    const resultType = resultTypes[resultData.type];
-    const shareUrl = createShareURL(resultData.type);
-
-    Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-            title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
-            link: {
-                mobileWebUrl: shareUrl,
-                webUrl: shareUrl,
-            },
-        },
-        buttons: [
-            {
-                title: '테스트 하러가기',
-                link: {
-                    mobileWebUrl: shareUrl,
-                    webUrl: shareUrl,
-                },
-            },
-        ],
-    });
+    return null;
 }
 
 // 페이지 로드 시 URL 파라미터 확인
@@ -958,9 +827,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 링크 복사하기
 function copyLink() {
-    const resultData = calculateResult();
+    const result = calculateResult();
     const url = new URL(window.location.href);
-    url.searchParams.set('result', resultData.type);
+    url.searchParams.set('result', result.type);
     const shareUrl = url.toString();
     
     if (navigator.clipboard && window.isSecureContext) {
@@ -996,17 +865,17 @@ function shareToKakao() {
         return;
     }
 
-    const resultData = calculateResult();
-    const resultType = resultTypes[resultData.type];
+    const result = calculateResult();
+    const resultType = resultTypes[result.type];
     const shareUrl = new URL(window.location.href);
-    shareUrl.searchParams.set('result', resultData.type);
+    shareUrl.searchParams.set('result', result.type);
 
     Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
             title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
+            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
             link: {
                 mobileWebUrl: shareUrl.toString(),
                 webUrl: shareUrl.toString(),
@@ -1114,23 +983,6 @@ async function saveAsImage() {
 
 // 결과 계산 함수
 function calculateResult() {
-    // URL에서 결과 타입을 먼저 확인
-    const resultFromURL = getResultFromURL();
-    if (resultFromURL && resultTypes[resultFromURL]) {
-        return {
-            type: resultFromURL,
-            patterns: null
-        };
-    }
-
-    // 답변이 없는 경우 기본값 반환
-    if (!userAnswers || userAnswers.length === 0) {
-        return {
-            type: "분위기 메이커형",
-            patterns: null
-        };
-    }
-
     // 답변 패턴 분석
     let patterns = {
         "분위기 메이커형": 0,
@@ -1164,7 +1016,7 @@ function calculateResult() {
     
     // 가장 높은 점수의 성향 찾기
     let maxScore = -1;
-    let resultType = null;
+    let resultType = "든든한 지원자형"; // 기본값
     
     for (const [type, score] of Object.entries(patterns)) {
         if (score > maxScore) {
@@ -1173,18 +1025,8 @@ function calculateResult() {
         }
     }
     
-    // 동점인 경우 처리
-    const tiedTypes = Object.entries(patterns)
-        .filter(([_, score]) => score === maxScore)
-        .map(([type, _]) => type);
-    
-    if (tiedTypes.length > 1) {
-        // 동점인 경우 랜덤하게 선택
-        resultType = tiedTypes[Math.floor(Math.random() * tiedTypes.length)];
-    }
-    
     return {
-        type: resultType || "분위기 메이커형", // 만약의 경우를 위한 안전장치
+        type: resultType,
         patterns: patterns
     };
 }
