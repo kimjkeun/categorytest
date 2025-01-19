@@ -1114,6 +1114,23 @@ async function saveAsImage() {
 
 // 결과 계산 함수
 function calculateResult() {
+    // URL에서 결과 타입을 먼저 확인
+    const resultFromURL = getResultFromURL();
+    if (resultFromURL && resultTypes[resultFromURL]) {
+        return {
+            type: resultFromURL,
+            patterns: null
+        };
+    }
+
+    // 답변이 없는 경우 기본값 반환
+    if (!userAnswers || userAnswers.length === 0) {
+        return {
+            type: "분위기 메이커형",
+            patterns: null
+        };
+    }
+
     // 답변 패턴 분석
     let patterns = {
         "분위기 메이커형": 0,
@@ -1147,7 +1164,7 @@ function calculateResult() {
     
     // 가장 높은 점수의 성향 찾기
     let maxScore = -1;
-    let resultType = "든든한 지원자형"; // 기본값
+    let resultType = null;
     
     for (const [type, score] of Object.entries(patterns)) {
         if (score > maxScore) {
@@ -1156,8 +1173,18 @@ function calculateResult() {
         }
     }
     
+    // 동점인 경우 처리
+    const tiedTypes = Object.entries(patterns)
+        .filter(([_, score]) => score === maxScore)
+        .map(([type, _]) => type);
+    
+    if (tiedTypes.length > 1) {
+        // 동점인 경우 랜덤하게 선택
+        resultType = tiedTypes[Math.floor(Math.random() * tiedTypes.length)];
+    }
+    
     return {
-        type: resultType,
+        type: resultType || "분위기 메이커형", // 만약의 경우를 위한 안전장치
         patterns: patterns
     };
 }
