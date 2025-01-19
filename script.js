@@ -1,3 +1,148 @@
+// 결과 표시 함수
+async function showResult(forcedType = null) {
+    const resultData = forcedType ? { type: forcedType } : calculateResult();
+    const resultType = resultTypes[resultData.type];
+    
+    if (!resultType) {
+        console.error('결과 데이터를 찾을 수 없습니다:', resultData.type);
+        return;
+    }
+    
+    // 기본 결과 표시
+    document.getElementById('result-type').textContent = resultType.type || '';
+    document.getElementById('result-description').textContent = resultType.description || '';
+    
+    // 성격 특성 목록 표시
+    const personalityTraitsListEl = document.getElementById('personality-traits-list');
+    if (resultType.personalityTraits && Array.isArray(resultType.personalityTraits)) {
+        personalityTraitsListEl.innerHTML = resultType.personalityTraits.map(trait => `
+            <li>
+                <div class="personality-trait-title">${trait.title || ''}</div>
+                <div class="personality-trait-description">${trait.description || ''}</div>
+            </li>
+        `).join('');
+    } else {
+        personalityTraitsListEl.innerHTML = '<li>성격 특성 정보가 없습니다.</li>';
+    }
+
+    // 의사소통 스타일 목록 표시
+    const communicationListEl = document.getElementById('communication-style-list');
+    if (resultType.communicationStyle && Array.isArray(resultType.communicationStyle)) {
+        communicationListEl.innerHTML = resultType.communicationStyle.map(style => `
+            <li>
+                <div class="communication-style-title">${style.title || ''}</div>
+                <div class="communication-style-description">${style.description || ''}</div>
+            </li>
+        `).join('');
+    } else {
+        communicationListEl.innerHTML = '<li>의사소통 스타일 정보가 없습니다.</li>';
+    }
+
+    // 강점 목록 표시
+    const strengthsListEl = document.getElementById('strengths-list');
+    if (resultType.strengths && Array.isArray(resultType.strengths)) {
+        strengthsListEl.innerHTML = resultType.strengths.map(strength => {
+            if (typeof strength === 'string') {
+                return `<li>${strength}</li>`;
+            } else {
+                return `
+                    <li>
+                        <span class="strength-title">${strength.title || ''}</span>
+                        <p>${strength.description || ''}</p>
+                    </li>
+                `;
+            }
+        }).join('');
+    } else {
+        strengthsListEl.innerHTML = '<li>강점 정보가 없습니다.</li>';
+    }
+
+    // 약점 목록 표시
+    const weaknessesListEl = document.getElementById('weaknesses-list');
+    if (resultType.weaknesses && Array.isArray(resultType.weaknesses)) {
+        weaknessesListEl.innerHTML = resultType.weaknesses.map(weakness => {
+            if (typeof weakness === 'string') {
+                return `<li>${weakness}</li>`;
+            } else {
+                return `
+                    <li>
+                        <span class="weakness-title">${weakness.title || ''}</span>
+                        <p>${weakness.description || ''}</p>
+                    </li>
+                `;
+            }
+        }).join('');
+    } else {
+        weaknessesListEl.innerHTML = '<li>보완할 점 정보가 없습니다.</li>';
+    }
+
+    // 유형별 이미지 설정
+    const typeImage = document.getElementById('type-illustration');
+    if (resultType.type) {
+        typeImage.src = `images/characters/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
+        typeImage.alt = resultType.type;
+    }
+
+    // 화면 전환
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+    document.getElementById('result-screen').classList.add('active');
+}
+
+// 결과 공유 함수
+function shareResult() {
+    const resultData = calculateResult();
+    const shareText = `나의 친구 유형 테스트 결과:\n${resultData.type}\n\n테스트 해보기 👉`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: '나의 친구 유형 테스트',
+            text: shareText,
+            url: window.location.href
+        })
+        .catch(error => {
+            console.log('공유 실패:', error);
+            alert('결과를 복사했습니다! 원하는 곳에 붙여넣어 공유하세요.');
+            copyToClipboard(shareText + window.location.href);
+        });
+    } else {
+        alert('결과를 복사했습니다! 원하는 곳에 붙여넣어 공유하세요.');
+        copyToClipboard(shareText + window.location.href);
+    }
+}
+
+// 카카오톡 공유하기
+function shareToKakao() {
+    if (!window.Kakao) {
+        console.error('Kakao SDK가 로드되지 않았습니다.');
+        return;
+    }
+
+    const resultData = calculateResult();
+    const resultType = resultTypes[resultData.type];
+
+    Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+            title: '나의 친구 유형 테스트 결과',
+            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
+            link: {
+                mobileWebUrl: window.location.href,
+                webUrl: window.location.href,
+            },
+        },
+        buttons: [
+            {
+                title: '테스트 하러가기',
+                link: {
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
+                },
+            },
+        ],
+    });
+}
+
 // 질문 데이터
 const questions = [
     {
@@ -111,7 +256,7 @@ const questions = [
 ];
 
 // 현재 질문 인덱스
-let currentQuestion = 0;
+let currentQuestionIndex = 0;
 // 사용자의 답변을 저장할 배열
 let userAnswers = [];
 
@@ -356,7 +501,7 @@ const resultTypes = {
         personalityTraits: [
             {
                 title: "책임감",
-                description: "맡은 일을 끝까지 책임지고 완수합니다."
+                description: "맡은 일을 끝까지 책임지고 수행합니다."
             },
             {
                 title: "신뢰성",
@@ -536,12 +681,12 @@ function startTest() {
 
 // 질문 표시 함수
 function showQuestion() {
-    if (currentQuestion >= questions.length) {
+    if (currentQuestionIndex >= questions.length) {
         showResult();
         return;
     }
 
-    const question = questions[currentQuestion];
+    const question = questions[currentQuestionIndex];
     questionText.textContent = question.question;
 
     // 선택지 생성
@@ -551,145 +696,67 @@ function showQuestion() {
     updateProgress();
 }
 
-// 선택지 생성
+// 선택지 생성 함수
 function createOptions(options) {
     const optionsContainer = document.getElementById('options-container');
     optionsContainer.innerHTML = '';
-    options.forEach((option, index) => {
+    
+    // 선택지와 인덱스를 함께 저장
+    let indexedOptions = options.map((option, index) => ({
+        text: option,
+        originalIndex: index
+    }));
+    
+    // 선택지 순서를 랜덤으로 섞기
+    shuffleArray(indexedOptions);
+    
+    indexedOptions.forEach((option) => {
         const optionElement = document.createElement('div');
         optionElement.className = 'question-option';
-        optionElement.textContent = option;
-        optionElement.onclick = () => selectOption(index);
+        optionElement.textContent = option.text;
+        optionElement.onclick = () => selectOption(option.originalIndex);
         optionsContainer.appendChild(optionElement);
     });
 }
 
-// 선택지 선택
+// 선택지 선택 함수
 function selectOption(index) {
+    // 이미 답변했다면 무시
+    if (currentQuestionIndex >= questions.length) return;
+    
     // 이전 선택 제거
     document.querySelectorAll('.question-option').forEach(option => {
         option.classList.remove('selected');
     });
     
     // 새로운 선택 표시
-    const selectedOption = document.querySelectorAll('.question-option')[index];
+    const selectedOption = event.target;
     selectedOption.classList.add('selected');
     
-    // 답변 저장
-    userAnswers[currentQuestion] = index;
+    // 현재 질문에 대한 답변 저장
+    userAnswers[currentQuestionIndex] = index;
     
     // 잠시 후 다음 질문으로
     setTimeout(() => {
-        nextQuestion();
+        currentQuestionIndex++;
+        if (currentQuestionIndex >= questions.length) {
+            showResult();
+        } else {
+            showQuestion();
+        }
     }, 500);
 }
 
 // 진행률 업데이트
 function updateProgress() {
-    const progress = ((currentQuestion + 1) / questions.length) * 100;
+    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
     document.querySelector('.progress-bar-fill').style.width = `${progress}%`;
-}
-
-// 다음 질문으로
-function nextQuestion() {
-    currentQuestion++;
-    showQuestion();
-}
-
-// 결과 표시 함수
-async function showResult() {
-    const resultData = calculateResult();
-    const type = resultData.type;
-    const resultType = resultTypes[type];
-    if (!resultType) {
-        console.error('결과 데이터를 찾을 수 없습니다:', type);
-        return;
-    }
-    
-    // 기본 결과 표시
-    document.getElementById('result-type').textContent = resultType.type || '';
-    document.getElementById('result-description').textContent = resultType.description || '';
-    
-    // 성격 특성 목록 표시
-    const personalityTraitsListEl = document.getElementById('personality-traits-list');
-    if (resultType.personalityTraits && Array.isArray(resultType.personalityTraits)) {
-        personalityTraitsListEl.innerHTML = resultType.personalityTraits.map(trait => `
-            <li>
-                <div class="personality-trait-title">${trait.title || ''}</div>
-                <div class="personality-trait-description">${trait.description || ''}</div>
-            </li>
-        `).join('');
-    } else {
-        personalityTraitsListEl.innerHTML = '<li>성격 특성 정보가 없습니다.</li>';
-    }
-
-    // 의사소통 스타일 목록 표시
-    const communicationListEl = document.getElementById('communication-style-list');
-    if (resultType.communicationStyle && Array.isArray(resultType.communicationStyle)) {
-        communicationListEl.innerHTML = resultType.communicationStyle.map(style => `
-            <li>
-                <div class="communication-style-title">${style.title || ''}</div>
-                <div class="communication-style-description">${style.description || ''}</div>
-            </li>
-        `).join('');
-    } else {
-        communicationListEl.innerHTML = '<li>의사소통 스타일 정보가 없습니다.</li>';
-    }
-
-    // 강점 목록 표시
-    const strengthsListEl = document.getElementById('strengths-list');
-    if (resultType.strengths && Array.isArray(resultType.strengths)) {
-        strengthsListEl.innerHTML = resultType.strengths.map(strength => {
-            if (typeof strength === 'string') {
-                return `<li>${strength}</li>`;
-            } else {
-                return `
-                    <li>
-                        <span class="strength-title">${strength.title || ''}</span>
-                        <p>${strength.description || ''}</p>
-                    </li>
-                `;
-            }
-        }).join('');
-    } else {
-        strengthsListEl.innerHTML = '<li>강점 정보가 없습니다.</li>';
-    }
-
-    // 약점 목록 표시
-    const weaknessesListEl = document.getElementById('weaknesses-list');
-    if (resultType.weaknesses && Array.isArray(resultType.weaknesses)) {
-        weaknessesListEl.innerHTML = resultType.weaknesses.map(weakness => {
-            if (typeof weakness === 'string') {
-                return `<li>${weakness}</li>`;
-            } else {
-                return `
-                    <li>
-                        <span class="weakness-title">${weakness.title || ''}</span>
-                        <p>${weakness.description || ''}</p>
-                    </li>
-                `;
-            }
-        }).join('');
-    } else {
-        weaknessesListEl.innerHTML = '<li>보완할 점 정보가 없습니다.</li>';
-    }
-
-    // 유형별 이미지 설정
-    const typeImage = document.getElementById('type-illustration');
-    if (resultType.type) {
-        typeImage.src = `images/characters/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
-        typeImage.alt = resultType.type;
-    }
-
-    // 화면 전환
-    document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
-    document.getElementById('result-screen').classList.add('active');
 }
 
 // 결과 공유 함수
 function shareResult() {
-    const result = calculateResult();
-    const shareText = `나의 친구 유형 테스트 결과:\n${result.type}\n\n테스트 해보기 👉`;
+    const resultData = calculateResult();
+    const shareText = `나의 친구 유형 테스트 결과:\n${resultData.type}\n\n테스트 해보기 👉`;
     
     if (navigator.share) {
         navigator.share({
@@ -708,16 +775,6 @@ function shareResult() {
     }
 }
 
-// 클립보드 복사 함수
-function copyToClipboard(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-}
-
 // 카카오톡 SDK 초기화
 function initializeKakao() {
     if (window.Kakao) {
@@ -734,15 +791,15 @@ function shareToKakao() {
         return;
     }
 
-    const result = calculateResult();
-    const resultType = resultTypes[result.type];
+    const resultData = calculateResult();
+    const resultType = resultTypes[resultData.type];
 
     Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
             title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
+            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
             link: {
                 mobileWebUrl: window.location.href,
                 webUrl: window.location.href,
@@ -763,9 +820,12 @@ function shareToKakao() {
 // URL에서 결과 파라미터 읽기
 function getResultFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
-    const resultType = urlParams.get('result');
-    if (resultType && resultTypes[resultType]) {
-        return resultType;
+    const resultType = decodeURIComponent(urlParams.get('result') || '');
+    
+    // 정확한 타입 매칭
+    const foundType = Object.keys(resultTypes).find(type => type === resultType);
+    if (foundType) {
+        return foundType;
     }
     return null;
 }
@@ -774,7 +834,7 @@ function getResultFromURL() {
 document.addEventListener('DOMContentLoaded', () => {
     const resultFromURL = getResultFromURL();
     if (resultFromURL) {
-        currentQuestion = questions.length; // 모든 질문을 완료한 것으로 처리
+        currentQuestionIndex = questions.length; // 모든 질문을 완료한 것으로 처리
         showResult(resultFromURL);
     }
     
@@ -812,9 +872,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 링크 복사하기
 function copyLink() {
-    const result = calculateResult();
+    const resultData = calculateResult();
     const url = new URL(window.location.href);
-    url.searchParams.set('result', result.type);
+    url.searchParams.set('result', resultData.type);
     const shareUrl = url.toString();
     
     if (navigator.clipboard && window.isSecureContext) {
@@ -850,17 +910,17 @@ function shareToKakao() {
         return;
     }
 
-    const result = calculateResult();
-    const resultType = resultTypes[result.type];
+    const resultData = calculateResult();
+    const resultType = resultTypes[resultData.type];
     const shareUrl = new URL(window.location.href);
-    shareUrl.searchParams.set('result', result.type);
+    shareUrl.searchParams.set('result', resultData.type);
 
     Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
             title: '나의 친구 유형 테스트 결과',
-            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
-            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
+            description: `나는 "${resultData.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${resultData.type.toLowerCase().replace(/ /g, '-')}.png`,
             link: {
                 mobileWebUrl: shareUrl.toString(),
                 webUrl: shareUrl.toString(),
@@ -970,52 +1030,55 @@ async function saveAsImage() {
 function calculateResult() {
     // 답변 패턴 분석
     let patterns = {
-        active: 0,      // 적극성
-        emotional: 0,   // 감성적 성향
-        logical: 0,     // 논리적 성향
-        social: 0       // 사교성
+        "분위기 메이커형": 0,
+        "신중한 조언가형": 0,
+        "감성적 지원가형": 0,
+        "든든한 지원자형": 0,
+        "충실한 동반자형": 0
     };
     
     // 각 답변에 따른 성향 점수 계산
     userAnswers.forEach((answer, index) => {
         switch(answer) {
-            case 0: // 주로 적극적/외향적 답변
-                patterns.active += 2;
-                patterns.social += 1;
+            case 0: // 적극적/외향적 답변
+                patterns["분위기 메이커형"] += 2;
+                patterns["든든한 지원자형"] += 1;
                 break;
-            case 1: // 주로 신중/논리적 답변
-                patterns.logical += 2;
+            case 1: // 신중/논리적 답변
+                patterns["신중한 조언가형"] += 2;
+                patterns["충실한 동반자형"] += 1;
                 break;
-            case 2: // 주로 감성적/공감적 답변
-                patterns.emotional += 2;
-                patterns.social += 1;
+            case 2: // 감성적/공감적 답변
+                patterns["감성적 지원가형"] += 2;
+                patterns["든든한 지원자형"] += 1;
                 break;
-            case 3: // 주로 관찰자/독립적 답변
-                patterns.logical += 1;
+            case 3: // 관찰자/독립적 답변
+                patterns["충실한 동반자형"] += 2;
+                patterns["신중한 조언가형"] += 1;
                 break;
         }
     });
     
-    // 가장 높은 점수의 성향을 기반으로 결과 결정
-    let maxPattern = Object.entries(patterns).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+    // 가장 높은 점수의 성향 찾기
+    let maxScore = -1;
+    let resultType = "든든한 지원자형"; // 기본값
     
-    switch(maxPattern) {
-        case 'active':
-            return resultTypes["분위기 메이커형"];
-        case 'emotional':
-            return resultTypes["감성적 지원가형"];
-        case 'logical':
-            return resultTypes["신중한 조언가형"];
-        case 'social':
-            return resultTypes["든든한 지원자형"];
-        default:
-            return resultTypes["충실한 동반자형"];
+    for (const [type, score] of Object.entries(patterns)) {
+        if (score > maxScore) {
+            maxScore = score;
+            resultType = type;
+        }
     }
+    
+    return {
+        type: resultType,
+        patterns: patterns
+    };
 }
 
 // 테스트 다시하기 함수
 function restartTest() {
-    currentQuestion = 0;
+    currentQuestionIndex = 0;
     userAnswers = [];
     resultScreen.classList.remove('active');
     startScreen.classList.add('active');
