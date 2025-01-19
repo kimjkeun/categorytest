@@ -718,79 +718,104 @@ function copyToClipboard(text) {
     document.body.removeChild(textarea);
 }
 
-// 결과를 이미지로 저장하는 함수 - 현재 비활성화됨
-/*
-async function saveAsImage() {
-    try {
-        // 이미지 저장 중임을 알리는 토스트 메시지
-        showToast('이미지를 생성하는 중입니다...');
-        
-        // 결과 섹션의 스타일을 임시로 조정
-        const resultSection = document.querySelector('.result-container');
-        const originalPosition = resultSection.style.position;
-        resultSection.style.position = 'relative';
-        
-        // 공유 버튼 숨기기
-        const shareButtons = document.querySelector('.share-buttons');
-        const originalDisplay = shareButtons.style.display;
-        shareButtons.style.display = 'none';
-
-        // html2canvas 옵션
-        const options = {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-            onclone: function(clonedDoc) {
-                // 클론된 문서의 스타일 조정
-                const clonedResult = clonedDoc.querySelector('.result-container');
-                if (clonedResult) {
-                    clonedResult.style.padding = '20px';
-                    clonedResult.style.margin = '0';
-                    clonedResult.style.width = 'auto';
-                }
-            }
-        };
-
-        // 이미지 생성
-        const canvas = await html2canvas(resultSection, options);
-        
-        // 원래 스타일 복구
-        resultSection.style.position = originalPosition;
-        shareButtons.style.display = originalDisplay;
-
-        // 이미지 저장
-        const image = canvas.toDataURL('image/png', 1.0);
-        const link = document.createElement('a');
-        link.download = '나의_친구_유형_테스트_결과.png';
-        link.href = image;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        showToast('이미지가 저장되었습니다!');
-    } catch (error) {
-        console.error('이미지 저장 중 오류 발생:', error);
-        showToast('이미지 저장에 실패했습니다. 다시 시도해주세요.');
-        
-        // 에러 발생 시 스타일 복구
-        const resultSection = document.querySelector('.result-container');
-        const shareButtons = document.querySelector('.share-buttons');
-        if (resultSection) resultSection.style.position = 'relative';
-        if (shareButtons) shareButtons.style.display = 'flex';
-    }
-}
-*/
-
 // 카카오톡 SDK 초기화
 function initializeKakao() {
     if (window.Kakao) {
         if (!Kakao.isInitialized()) {
-            Kakao.init('6cea03176eadeb287f4ed7dd11ab687e');
+            Kakao.init('6cea03176eadeb287f4ed7dd11ab687e'); // 여기에 실제 앱 키를 넣어주세요
         }
     }
 }
+
+// 카카오톡 공유하기
+function shareToKakao() {
+    if (!window.Kakao) {
+        console.error('Kakao SDK가 로드되지 않았습니다.');
+        return;
+    }
+
+    const result = calculateResult();
+    const resultType = resultTypes[result.type];
+
+    Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+            title: '나의 친구 유형 테스트 결과',
+            description: `나는 "${result.type}" 유형입니다.\n${resultType.description.substring(0, 100)}...`,
+            imageUrl: window.location.origin + `/images/characters/${result.type.toLowerCase().replace(/ /g, '-')}.png`,
+            link: {
+                mobileWebUrl: window.location.href,
+                webUrl: window.location.href,
+            },
+        },
+        buttons: [
+            {
+                title: '테스트 하러가기',
+                link: {
+                    mobileWebUrl: window.location.href,
+                    webUrl: window.location.href,
+                },
+            },
+        ],
+    });
+}
+
+// 링크 복사하기
+function copyLink() {
+    const url = window.location.href;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        // navigator.clipboard API 사용 (HTTPS 환경)
+        navigator.clipboard.writeText(url)
+            .then(() => showToast('링크가 복사되었습니다!'))
+            .catch(() => showToast('링크 복사에 실패했습니다.'));
+    } else {
+        // 대체 방법 (HTTP 환경)
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        
+        try {
+            document.execCommand('copy');
+            showToast('링크가 복사되었습니다!');
+        } catch (err) {
+            console.error('링크 복사 실패:', err);
+            showToast('링크 복사에 실패했습니다.');
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    }
+}
+
+// 토스트 메시지 표시
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-message';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 2000);
+    }, 100);
+}
+
+// 이벤트 리스너 등록
+document.addEventListener('DOMContentLoaded', () => {
+    initializeKakao();
+
+    document.getElementById('save-image-btn').addEventListener('click', saveAsImage);
+    document.getElementById('kakao-share-btn').addEventListener('click', shareToKakao);
+    document.getElementById('copy-link-btn').addEventListener('click', copyLink);
+});
 
 // 결과를 이미지로 저장하는 함수
 async function saveAsImage() {
@@ -854,72 +879,6 @@ async function saveAsImage() {
         if (shareButtons) shareButtons.style.display = 'flex';
     }
 }
-
-// 카카오톡 공유하기
-function shareToKakao() {
-    if (!window.Kakao) {
-        showToast('카카오톡 공유 기능을 불러오는 중 오류가 발생했습니다.');
-        return;
-    }
-
-    const resultType = document.getElementById('result-type').textContent;
-    const resultDesc = document.getElementById('result-description').textContent;
-
-    Kakao.Link.sendDefault({
-        objectType: 'feed',
-        content: {
-            title: '나의 친구 유형 테스트 결과',
-            description: `나의 유형은 ${resultType}입니다.\n${resultDesc}`,
-            imageUrl: 'YOUR_IMAGE_URL', // 여기에 대표 이미지 URL을 넣으세요
-            link: {
-                mobileWebUrl: window.location.href,
-                webUrl: window.location.href,
-            },
-        },
-        buttons: [
-            {
-                title: '테스트 하러가기',
-                link: {
-                    mobileWebUrl: window.location.href,
-                    webUrl: window.location.href,
-                },
-            },
-        ],
-    });
-}
-
-// 링크 복사하기
-function copyLink() {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url)
-        .then(() => {
-            showToast('링크가 복사되었습니다!');
-        })
-        .catch(() => {
-            showToast('링크 복사에 실패했습니다.');
-        });
-}
-
-// 토스트 메시지 표시
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast-message';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.remove();
-    }, 2000);
-}
-
-// 이벤트 리스너 등록
-document.addEventListener('DOMContentLoaded', () => {
-    initializeKakao();
-
-    document.getElementById('save-image-btn').addEventListener('click', saveAsImage);
-    document.getElementById('kakao-share-btn').addEventListener('click', shareToKakao);
-    document.getElementById('copy-link-btn').addEventListener('click', copyLink);
-});
 
 // 결과 계산 함수
 function calculateResult() {
