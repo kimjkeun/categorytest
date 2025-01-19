@@ -810,11 +810,36 @@ function showToast(message) {
 
 // 이벤트 리스너 등록
 document.addEventListener('DOMContentLoaded', () => {
+    // 카카오톡 초기화
     initializeKakao();
-
-    document.getElementById('save-image-btn').addEventListener('click', saveAsImage);
-    document.getElementById('kakao-share-btn').addEventListener('click', shareToKakao);
-    document.getElementById('copy-link-btn').addEventListener('click', copyLink);
+    
+    // 시작 버튼
+    document.getElementById('start-btn').addEventListener('click', startTest);
+    
+    // 공유 버튼들
+    const kakaoShareBtn = document.getElementById('kakao-share-btn');
+    if (kakaoShareBtn) {
+        kakaoShareBtn.addEventListener('click', () => {
+            try {
+                shareToKakao();
+            } catch (error) {
+                console.error('카카오톡 공유 중 오류:', error);
+                showToast('카카오톡 공유 중 오류가 발생했습니다.');
+            }
+        });
+    }
+    
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', () => {
+            try {
+                copyLink();
+            } catch (error) {
+                console.error('링크 복사 중 오류:', error);
+                showToast('링크 복사 중 오류가 발생했습니다.');
+            }
+        });
+    }
 });
 
 // 결과를 이미지로 저장하는 함수
