@@ -655,7 +655,7 @@ async function showResult() {
     // 유형별 이미지 설정
     const typeImage = document.getElementById('type-illustration');
     if (resultType.type) {
-        typeImage.src = `images/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
+        typeImage.src = `images/characters/${resultType.type.toLowerCase().replace(/ /g, '-')}.png`;
         typeImage.alt = resultType.type;
     }
 
